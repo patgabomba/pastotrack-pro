@@ -120,6 +120,18 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 0}
 </section>
 
 <section id="alimenti" class="page">
+ 
+<div class="card">
+  <h2>🔎 Cerca con codice a barre</h2>
+  <p>Inserisci il codice EAN del prodotto per recuperare i valori nutrizionali.</p>
+  <div class="form-group">
+    <label for="barcodeInput">Codice a barre (EAN)</label>
+    <input id="barcodeInput" type="text" inputmode="numeric" placeholder="Es. 8000500037560">
+  </div>
+  <button type="button" id="barcodeSearchBtn">Cerca prodotto</button>
+  <p id="barcodeStatus" role="status"></p>
+</div>
+
  <div class="card">
   <h2>Database alimenti</h2>
   <p class="muted small">Gestisci i tuoi alimenti. I valori sono indicativi: controlla sempre l'etichetta del prodotto.</p>
@@ -379,6 +391,56 @@ $("resetAll").addEventListener("click",()=>{
 let resizeTimer;window.addEventListener("resize",()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderProgress,150)});
 renderAll();
 })();
+ 
+document.getElementById("barcodeSearchBtn")?.addEventListener("click", async function () {
+  const code = document.getElementById("barcodeInput")?.value.trim();
+  const status = document.getElementById("barcodeStatus");
+
+  if (!code || !/^\d{8,14}$/.test(code)) {
+    if (status) status.textContent = "Inserisci un codice a barre valido.";
+    return;
+  }
+
+  if (status) status.textContent = "Ricerca del prodotto in corso...";
+
+  try {
+    const response = await fetch(
+      "https://world.openfoodfacts.org/api/v2/product/" +
+      encodeURIComponent(code) +
+      ".json"
+    );
+
+    if (!response.ok) throw new Error("Errore di rete");
+
+    const data = await response.json();
+
+    if (data.status !== 1 || !data.product) {
+      if (status) status.textContent = "Prodotto non trovato. Prova a inserirlo manualmente.";
+      return;
+    }
+
+    const p = data.product;
+    const n = p.nutriments || {};
+    const fields = {
+      foodName: p.product_name_it || p.product_name || "",
+      foodKcal: n["energy-kcal_100g"],
+      foodProtein: n.proteins_100g,
+      foodCarbs: n.carbohydrates_100g,
+      foodFat: n.fat_100g
+    };
+
+    for (const [id, value] of Object.entries(fields)) {
+      const el = document.getElementById(id);
+      if (el && value != null) el.value = value;
+    }
+
+    if (status) status.textContent =
+      "Prodotto trovato! Controlla i dati e inserisci la quantità in grammi.";
+  } catch (error) {
+    if (status) status.textContent = "Connessione non riuscita. Riprova.";
+  }
+});
+
 </script>
 </body>
 </html>
