@@ -1,0 +1,161 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101114">
+<title>PastoTrack Pro</title>
+<style>
+:root{color-scheme:dark;--bg:#101114;--panel:#1a1b22;--line:#30313a;--text:#f5f5f7;--muted:#a0a1af;--green:#b8f36b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+main{max-width:760px;margin:auto;padding:20px 14px 50px}
+h1{font-size:27px;margin:8px 0}.logo{font-weight:900;font-size:21px;margin-bottom:26px}.logo span{color:var(--green)}
+p,.muted{color:var(--muted);font-size:13px;line-height:1.5}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:16px;margin:14px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:7px}
+input,select,button{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#101115;color:var(--text);font:inherit}
+button{background:var(--green);color:#15180f;border:0;font-weight:800;cursor:pointer}
+button.secondary{background:#2a2b33;color:white;border:1px solid var(--line)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--panel);border:1px solid var(--line);padding:14px;border-radius:14px}
+.stat small{color:var(--muted)}.num{font-size:25px;font-weight:850;margin:8px 0}
+.bar{height:5px;background:#34353d;border-radius:9px;margin-top:10px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--green)}
+.actions{display:flex;gap:8px;margin-top:12px}.actions button{flex:1}
+.entry{padding:12px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.entry:last-child{border-bottom:0}.entry small{color:var(--muted);display:block;margin-top:5px}
+.tabs{display:flex;gap:7px;overflow:auto;margin:15px 0}.tabs button{white-space:nowrap;min-width:auto;padding:10px}
+.tabs button.active{background:var(--green);color:#111}
+.hidden{display:none!important}
+canvas{width:100%;height:190px;display:block}
+@media(min-width:600px){.stats{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<main>
+<div class="logo">PastoTrack<span> Pro</span></div>
+<div class="muted">IL TUO DIARIO ALIMENTARE</div>
+<h1>Ogni giorno conta.</h1>
+<p>Registra i tuoi pasti, monitora le calorie e controlla i progressi.</p>
+
+<div class="panel">
+<h3>La tua giornata</h3>
+<div class="grid">
+<div><label>DATA</label><input type="date" id="day"></div>
+<div><label>OBIETTIVO</label><select id="goal"><option value="massa">Massa</option><option value="mantenimento">Mantenimento</option><option value="definizione">Definizione</option><option value="custom">Personalizzato</option></select></div>
+<div><label>CALORIE OBIETTIVO</label><input id="gk" type="number" value="2800"></div>
+<div><label>PROTEINE OBIETTIVO (g)</label><input id="gp" type="number" value="160"></div>
+<div><label>CARBOIDRATI OBIETTIVO (g)</label><input id="gc" type="number" value="350"></div>
+<div><label>GRASSI OBIETTIVO (g)</label><input id="gf" type="number" value="80"></div>
+</div>
+</div>
+
+<div class="stats">
+<div class="stat"><small>🔥 CALORIE</small><div class="num" id="k">0</div><small id="kt"></small><div class="bar"><i id="kb"></i></div></div>
+<div class="stat"><small>🥩 PROTEINE</small><div class="num" id="p">0 g</div><small id="pt"></small><div class="bar"><i id="pb"></i></div></div>
+<div class="stat"><small>🍚 CARBOIDRATI</small><div class="num" id="c">0 g</div><small id="ct"></small><div class="bar"><i id="cb"></i></div></div>
+<div class="stat"><small>🥑 GRASSI</small><div class="num" id="f">0 g</div><small id="ft"></small><div class="bar"><i id="fb"></i></div></div>
+</div>
+
+<div class="tabs">
+<button class="active" data-tab="diario">Diario</button>
+<button class="secondary" data-tab="grafici">Grafici</button>
+<button class="secondary" data-tab="backup">Backup</button>
+</div>
+
+<section id="diario">
+<div class="panel">
+<h3>Aggiungi alimento</h3>
+<div style="margin-bottom:12px"><label>ALIMENTO</label><input id="name" list="foods" placeholder="Es. riso, pollo, banana"><datalist id="foods"></datalist></div>
+<div style="margin-bottom:12px"><label>PASTO</label><select id="meal"><option>Colazione</option><option>Spuntino mattina</option><option>Pranzo</option><option>Spuntino pomeriggio</option><option>Cena</option><option>Altro</option></select></div>
+<div class="grid">
+<div><label>GRAMMI</label><input id="grams" type="number" value="100" min="0.1" step="any"></div>
+<div><label>KCAL / 100 g</label><input id="fk" type="number" value="0" min="0" step="any"></div>
+<div><label>PROTEINE / 100 g</label><input id="fp" type="number" value="0" min="0" step="any"></div>
+<div><label>CARBOIDRATI / 100 g</label><input id="fc" type="number" value="0" min="0" step="any"></div>
+<div><label>GRASSI / 100 g</label><input id="ff" type="number" value="0" min="0" step="any"></div>
+</div>
+<p id="preview">Porzione: 0 kcal · P 0 g · C 0 g · G 0 g</p>
+<button id="add">+ Aggiungi al diario</button>
+</div>
+<div class="panel"><h3>Alimenti registrati</h3><div id="entries"></div><button class="secondary" id="clear">Svuota giornata</button></div>
+</section>
+
+<section id="grafici" class="hidden">
+<div class="panel"><h3>Calorie · ultimi 7 giorni</h3><canvas id="chart"></canvas></div>
+</section>
+
+<section id="backup" class="hidden">
+<div class="panel"><h3>Backup dei dati</h3><p>Esporta una copia del tuo diario per conservarla o trasferirla su un altro dispositivo.</p><button id="export">Scarica backup JSON</button><div style="height:15px"></div><label>IMPORTA BACKUP JSON</label><input id="file" type="file" accept=".json,application/json"><div style="height:10px"></div><button id="import" class="secondary">Importa dati</button></div>
+</section>
+<p class="muted">I dati vengono salvati nel browser di questo dispositivo. Esporta regolarmente un backup per non perderli.</p>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const key="pastotrack_pro_data";
+const catalog=[
+["Riso basmati crudo",360,7.5,78,1],
+["Riso cotto",130,2.7,28,0.3],
+["Pasta secca",353,12.5,72,1.5],
+["Pasta cotta",158,5.8,31,0.9],
+["Petto di pollo crudo",120,23,0,2],
+["Petto di pollo cotto",165,31,0,3.6],
+["Uovo",143,12.6,0.7,9.5],
+["Albume",52,10.9,0.7,0.2],
+["Tonno al naturale",116,26,0,1],
+["Salmone",208,20,0,13],
+["Pane",265,9,49,3.2],
+["Fiocchi d'avena",372,13.5,58.7,7],
+["Latte parzialmente scremato",46,3.3,4.9,1.5],
+["Yogurt greco 0%",59,10.3,3.6,0.4],
+["Whey protein",400,80,8,6],
+["Banana",89,1.1,22.8,0.3],
+["Mela",52,0.3,13.8,0.2],
+["Mandorle",579,21.2,21.6,49.9],
+["Burro di arachidi",588,25,20,50],
+["Olio d'oliva",884,0,0,100],
+["Patate bollite",87,1.9,20.1,0.1],
+["Parmigiano",402,32.4,0,29.7],
+["Mozzarella",250,18,2,19],
+["Lenticchie cotte",116,9,20.1,0.4],
+["Broccoli",34,2.8,6.6,0.4]
+];
+let db={};try{db=JSON.parse(localStorage.getItem(key)||"{}")}catch(e){db={}}
+function dateNow(){let d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+$("day").value=dateNow();
+function entries(){return db[$("day").value]||(db[$("day").value]=[])}
+function save(){try{localStorage.setItem(key,JSON.stringify(db))}catch(e){alert("Impossibile salvare i dati nel browser.")}}
+function fmt(x){return (Math.round(x*10)/10).toLocaleString("it-IT",{maximumFractionDigits:1})}
+function totals(date=$("day").value){return (db[date]||[]).reduce((a,e)=>{a.k+=e.g*e.kcal/100;a.p+=e.g*e.p/100;a.c+=e.g*e.c/100;a.f+=e.g*e.f/100;return a},{k:0,p:0,c:0,f:0})}
+function safe(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function render(){
+ let t=totals(),goals=[+$("gk").value||0,+$("gp").value||0,+$("gc").value||0,+$("gf").value||0],vals=[t.k,t.p,t.c,t.f],ids=["k","p","c","f"],metas=["kt","pt","ct","ft"],bars=["kb","pb","cb","fb"];
+ vals.forEach((v,i)=>{$(ids[i]).textContent=fmt(v)+(i?" g":"");$(metas[i]).textContent="di "+fmt(goals[i])+(i?" g":" kcal");$(bars[i]).style.width=(goals[i]?Math.min(100,v/goals[i]*100):0)+"%"});
+ let box=$("entries");
+ if(!entries().length)box.innerHTML='<p class="muted">Nessun alimento registrato oggi.</p>';
+ else box.innerHTML=entries().map((e,i)=>`<div class="entry"><div><b>${safe(e.name)}</b><small>${safe(e.meal)} · ${fmt(e.g)} g<br>${fmt(e.g*e.p/100)} g proteine · ${fmt(e.g*e.c/100)} g carboidrati · ${fmt(e.g*e.f/100)} g grassi</small></div><div style="text-align:right;white-space:nowrap"><b>${fmt(e.g*e.kcal/100)} kcal</b><br><button class="secondary" style="margin-top:7px;padding:6px 10px;width:auto" data-del="${i}">Elimina</button></div></div>`).join("");
+ box.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{entries().splice(+b.dataset.del,1);save();render()});
+ $("preview").textContent="Porzione: "+fmt(+$("grams").value*(+$("fk").value)/100)+" kcal · P "+fmt(+$("grams").value*(+$("fp").value)/100)+" g · C "+fmt(+$("grams").value*(+$("fc").value)/100)+" g · G "+fmt(+$("grams").value*(+$("ff").value)/100)+" g";
+}
+catalog.forEach(a=>{let o=document.createElement("option");o.value=a[0];$("foods").appendChild(o)});
+$("name").addEventListener("change",()=>{let a=catalog.find(a=>a[0].toLowerCase()===$("name").value.trim().toLowerCase());if(a){[$("fk").value,$("fp").value,$("fc").value,$("ff").value]=a.slice(1);render()}});
+["grams","fk","fp","fc","ff"].forEach(id=>$(id).addEventListener("input",render));
+$("add").onclick=()=>{let name=$("name").value.trim(),g=+$("grams").value,k=+$("fk").value,p=+$("fp").value,c=+$("fc").value,f=+$("ff").value;if(!name||g<=0||[g,k,p,c,f].some(v=>!Number.isFinite(v)||v<0)){alert("Inserisci un alimento e valori nutrizionali validi.");return}entries().push({name,g,kcal:k,p,c,f,meal:$("meal").value});save();$("name").value="";render()};
+$("day").onchange=render;
+$("clear").onclick=()=>{if(confirm("Vuoi eliminare tutti gli alimenti di questa giornata?")){db[$("day").value]=[];save();render()}};
+["gk","gp","gc","gf"].forEach(id=>$(id).addEventListener("input",render));
+$("goal").onchange=()=>{let preset={massa:[2800,160,350,80],mantenimento:[2400,150,280,80],definizione:[2000,160,200,65]};if(preset[$("goal").value])["gk","gp","gc","gf"].forEach((id,i)=>$(id).value=preset[$("goal").value][i]);render()};
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-tab]").forEach(x=>{x.classList.toggle("active",x===b);x.classList.toggle("secondary",x!==b)});["diario","grafici","backup"].forEach(id=>$(id).classList.toggle("hidden",id!==b.dataset.tab));if(b.dataset.tab==="grafici")drawChart()});
+function drawChart(){let c=$("chart"),ctx=c.getContext("2d"),w=c.clientWidth,h=190,dpr=window.devicePixelRatio||1;c.width=w*dpr;c.height=h*dpr;ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);let dates=[];for(let i=6;i>=0;i--){let d=new Date($("day").value+"T12:00:00");d.setDate(d.getDate()-i);dates.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"))}let vals=dates.map(d=>totals(d).k),max=Math.max(500,...vals)*1.15,left=35,bottom=27,top=10,usable=w-left-10,chartH=h-top-bottom;ctx.font="10px sans-serif";ctx.fillStyle="#a0a1af";ctx.strokeStyle="#30313a";for(let j=0;j<4;j++){let y=top+chartH*j/3;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(w-5,y);ctx.stroke();ctx.fillText(Math.round(max*(1-j/3)),0,y+3)}let bw=usable/7*.55;vals.forEach((v,i)=>{let x=left+usable*(i+.5)/7-bw/2,hh=v/max*chartH;ctx.fillStyle="#b8f36b";ctx.beginPath();ctx.roundRect(x,top+chartH-hh,bw,hh,4);ctx.fill();ctx.fillStyle="#a0a1af";ctx.fillText(dates[i].slice(8),x+2,h-8)})}
+$("export").onclick=()=>download("pastotrack-backup.json",JSON.stringify(db,null,2),"application/json");
+function download(name,content,type){let a=document.createElement("a"),u=URL.createObjectURL(new Blob([content],{type}));a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+$("import").onclick=()=>{let f=$("file").files[0];if(!f){alert("Scegli prima un file JSON.");return}let r=new FileReader();r.onload=()=>{try{let imported=JSON.parse(r.result);if(!imported||typeof imported!=="object"||Array.isArray(imported))throw Error();Object.keys(imported).forEach(d=>{if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&Array.isArray(imported[d]))db[d]=[...(db[d]||[]),...imported[d].filter(e=>e&&typeof e.name==="string"&&Number.isFinite(+e.g))]});save();render();alert("Backup importato.")}catch(e){alert("Il file non è un backup valido.")}};r.readAsText(f)};
+function drawOnResize(){if(!$("grafici").classList.contains("hidden"))drawChart()}
+window.addEventListener("resize",drawOnResize);
+render();
+</script>
+</body>
+</html>
