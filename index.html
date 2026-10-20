@@ -129,7 +129,32 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:20px 0}
     <input id="barcodeInput" type="text" inputmode="numeric" placeholder="Es. 8000500037560">
   </div>
   <button type="button" id="barcodeSearchBtn">Cerca prodotto</button>
+  
   <p id="barcodeStatus" role="status"></p>
+
+  <div id="barcodeProduct" class="card" style="display:none;margin-top:14px">
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+      <img id="barcodeImage" alt="Foto del prodotto"
+        style="display:none;width:120px;height:140px;object-fit:contain;background:#fff;border-radius:12px;padding:6px">
+      <div style="flex:1;min-width:150px">
+        <h3 id="barcodeName">Nome prodotto</h3>
+        <p id="barcodeBrand" class="muted small"></p>
+        <p id="barcodeCategory" class="muted small"></p>
+      </div>
+    </div>
+    <hr>
+    <h3>Valori nutrizionali per 100 g</h3>
+    <div class="grid2">
+      <div class="stat"><div class="num" id="barcodeKcal">—</div><div class="label">KCAL</div></div>
+      <div class="stat"><div class="num" id="barcodeProtein">—</div><div class="label">PROTEINE (g)</div></div>
+      <div class="stat"><div class="num" id="barcodeCarbs">—</div><div class="label">CARBOIDRATI (g)</div></div>
+      <div class="stat"><div class="num" id="barcodeFat">—</div><div class="label">GRASSI (g)</div></div>
+    </div>
+    <p id="barcodeMissing" class="notice"></p>
+    <button type="button" id="barcodeUseBtn" class="btn full sectiongap">Usa nel diario</button>
+    <button type="button" id="barcodeSaveBtn" class="btn secondary full sectiongap">Salva nel database alimenti</button>
+  </div>
+
 </div>
 
  <div class="card">
@@ -392,16 +417,107 @@ let resizeTimer;window.addEventListener("resize",()=>{clearTimeout(resizeTimer);
 renderAll();
 })();
  
-document.getElementById("barcodeSearchBtn")?.addEventListener("click", async function () {
-  const code = document.getElementById("barcodeInput")?.value.trim();
-  const status = document.getElementById("barcodeStatus");
 
-  if (!code || !/^\d{8,14}$/.test(code)) {
-    if (status) status.textContent = "Inserisci un codice a barre valido.";
+let barcodeCurrentProduct = null;
+
+const barcodeEl = id => document.getElementById(id);
+
+function barcodeText(id, value) {
+  barcodeEl(id).textContent = value || "";
+}
+
+function barcodeNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+function barcodeFormat(value) {
+  return value === null ? "—" : fmt(value);
+}
+
+function barcodeShowProduct(p) {
+  const n = p.nutriments || {};
+  const name = p.product_name_it || p.product_name || p.generic_name_it || p.generic_name || "Prodotto senza nome";
+  const brand = p.brands || "";
+  const category = p.categories || p.categories_tags?.join(", ") || "";
+  const image = p.image_front_url || p.image_url || "";
+
+  let kcal = barcodeNumber(n["energy-kcal_100g"]);
+  if (kcal === null) {
+    const kj = barcodeNumber(n["energy-kj_100g"]);
+    if (kj !== null) kcal = kj / 4.184;
+  }
+
+  const product = {
+    name,
+    brand,
+    category,
+    image,
+    kcal,
+    protein: barcodeNumber(n.proteins_100g),
+    carbs: barcodeNumber(n.carbohydrates_100g),
+    fat: barcodeNumber(n.fat_100g)
+  };
+
+  barcodeCurrentProduct = product;
+
+  barcodeText("barcodeName", product.name);
+  barcodeText("barcodeBrand", product.brand ? "Marca: " + product.brand : "Marca non disponibile");
+  barcodeText("barcodeCategory", product.category ? "Categoria: " + product.category : "Categoria non disponibile");
+
+  barcodeText("barcodeKcal", barcodeFormat(product.kcal));
+  barcodeText("barcodeProtein", barcodeFormat(product.protein));
+  barcodeText("barcodeCarbs", barcodeFormat(product.carbs));
+  barcodeText("barcodeFat", barcodeFormat(product.fat));
+
+  const img = barcodeEl("barcodeImage");
+  img.style.display = "none";
+  img.removeAttribute("src");
+
+  if (product.image && /^https:\/\//i.test(product.image)) {
+    img.onload = () => { img.style.display = "block"; };
+    img.onerror = () => { img.style.display = "none"; };
+    img.src = product.image;
+  }
+
+  const missing = [];
+  if (product.kcal === null) missing.push("calorie");
+  if (product.protein === null) missing.push("proteine");
+  if (product.carbs === null) missing.push("carboidrati");
+  if (product.fat === null) missing.push("grassi");
+
+  barcodeText(
+    "barcodeMissing",
+    missing.length
+      ? "Dati non disponibili per: " + missing.join(", ") + ". Controlla l'etichetta."
+      : "Valori recuperati dal database. Verifica sempre l'etichetta."
+  );
+
+  barcodeEl("barcodeProduct").style.display = "block";
+
+  // Compila il modulo diario solo con i valori effettivamente disponibili.
+  $("foodName").value = product.name;
+  $("foodKcal").value = product.kcal ?? "";
+  $("foodProtein").value = product.protein ?? "";
+  $("foodCarbs").value = product.carbs ?? "";
+  $("foodFat").value = product.fat ?? "";
+  $("foodSelect").value = "";
+}
+
+barcodeEl("barcodeSearchBtn").addEventListener("click", async () => {
+  const code = barcodeEl("barcodeInput").value.trim();
+  const status = barcodeEl("barcodeStatus");
+  const card = barcodeEl("barcodeProduct");
+
+  if (!/^\d{8,14}$/.test(code)) {
+    status.textContent = "Inserisci un codice a barre valido, da 8 a 14 cifre.";
     return;
   }
 
-  if (status) status.textContent = "Ricerca del prodotto in corso...";
+  status.textContent = "Ricerca del prodotto in corso...";
+  card.style.display = "none";
+  barcodeCurrentProduct = null;
 
   try {
     const response = await fetch(
@@ -415,31 +531,61 @@ document.getElementById("barcodeSearchBtn")?.addEventListener("click", async fun
     const data = await response.json();
 
     if (data.status !== 1 || !data.product) {
-      if (status) status.textContent = "Prodotto non trovato. Prova a inserirlo manualmente.";
+      status.textContent = "Prodotto non trovato. Puoi inserirlo manualmente.";
       return;
     }
 
-    const p = data.product;
-    const n = p.nutriments || {};
-    const fields = {
-      foodName: p.product_name_it || p.product_name || "",
-      foodKcal: n["energy-kcal_100g"],
-      foodProtein: n.proteins_100g,
-      foodCarbs: n.carbohydrates_100g,
-      foodFat: n.fat_100g
-    };
-
-    for (const [id, value] of Object.entries(fields)) {
-      const el = document.getElementById(id);
-      if (el && value != null) el.value = value;
-    }
-
-    if (status) status.textContent =
-      "Prodotto trovato! Controlla i dati e inserisci la quantità in grammi.";
+    barcodeShowProduct(data.product);
+    status.textContent = "Prodotto trovato! Controlla i dati prima di usarli.";
   } catch (error) {
-    if (status) status.textContent = "Connessione non riuscita. Riprova.";
+    status.textContent = "Ricerca non riuscita. Controlla la connessione e riprova.";
   }
 });
+
+barcodeEl("barcodeUseBtn").addEventListener("click", () => {
+  const p = barcodeCurrentProduct;
+  if (!p) return;
+
+  $("foodName").value = p.name;
+  $("foodKcal").value = p.kcal ?? "";
+  $("foodProtein").value = p.protein ?? "";
+  $("foodCarbs").value = p.carbs ?? "";
+  $("foodFat").value = p.fat ?? "";
+  $("foodSelect").value = "";
+
+  document.querySelector('nav button[data-page="diario"]').click();
+  $("grams").focus();
+});
+
+barcodeEl("barcodeSaveBtn").addEventListener("click", () => {
+  const p = barcodeCurrentProduct;
+  if (!p) return;
+
+  if ([p.kcal, p.protein, p.carbs, p.fat].some(v => v === null)) {
+    alert("Alcuni valori nutrizionali mancano. Controllali sull'etichetta prima di salvare.");
+    return;
+  }
+
+  const existing = foods.find(f => f.name.toLowerCase() === p.name.toLowerCase());
+  if (existing) {
+    alert("Questo alimento è già presente nel database.");
+    return;
+  }
+
+  foods.push({
+    id: id(),
+    name: p.name,
+    kcal: p.kcal,
+    protein: p.protein,
+    carbs: p.carbs,
+    fat: p.fat
+  });
+
+  save(keys.foods, foods);
+  renderFoods();
+  alert("Alimento salvato nel database!");
+});
+
 
 </script>
 </body>
